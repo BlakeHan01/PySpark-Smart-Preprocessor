@@ -21,7 +21,7 @@ def normalizer(df, column_name: str, column_new_name, range_start: float = 0, ra
 
 def date_extraction(df, colname: str, new_colname: str, choice=None, anothercol=None):
     # extract year, month, day... from the date
-    # choice:   'year', 'month', 'day', 'hour', 'minute', 'second' => y/M/d/h/m/s
+    # choice:   'year', 'month', 'day', 'hour', 'minute', 'second' => y/m/d/h/M/S
     #           'duration' => duration between the date of two columns
     #           'weekday' => weekday if 1-5, weekend if 6-7 
 
@@ -42,5 +42,5 @@ def date_extraction(df, colname: str, new_colname: str, choice=None, anothercol=
     elif choice == 'duration' and anothercol is not None:
         output = df.withColumn(new_colname, F.datediff(anothercol, colname))
     elif choice == 'weekday':
-        output = df.withColumn(new_colname, 'weekend' if F.dayofweek.isin([6, 7]) else 'weekday')
+        output = df.withColumn(new_colname, F.lit('weekend' if F.dayofweek in [6, 7] else 'weekday'))
     return output
