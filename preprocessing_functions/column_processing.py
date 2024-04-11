@@ -48,6 +48,11 @@ def date_extraction(df, colname: str, new_colname: str, choice=None, anothercol=
 
 
 def Imputation(df, threthold = 0.8, replace_strate = "mode_value"):
+    # User can define the threshold of the ratio of Null or Nan in each column
+    # by default, if the ratio of Null or Nan in one column > 0.8, then it will be dropped
+    # replace_strate defines the replace strategy of Null or Nan in each column
+    # by defalut, the strategy uses the mode value in each column to replace the Null/Nan
+    # If the data type of a column is numerical, then the user can specify one strategy from 3 kinds of values in each column
     fields = df.schema.fields
     for field in fields:
         col_name = field.name
