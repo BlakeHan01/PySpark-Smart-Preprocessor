@@ -37,25 +37,18 @@ def column_date_extraction_profiler(df) -> str:
     """
     Return the message to be passed into the chat_completion function
     """
-    date_cols = [
+    cols = [
         f.name
         for f in df.schema.fields
-        if isinstance(f.dataType, (DateType, TimestampType))
     ]
-    stats = df.select(date_cols).describe().collect()
-
     result_string = ""
-    for stat in stats:
-        result_string += (
-            f"{stat['summary']}: "
-            + ", ".join([f"{col}: {stat[col]}" for col in date_cols])
-            + "\n"
-        )
+    for c in cols:
+        result_string += str(c) + '\n'
 
     message = (
-        "Given the below datetime columns"
+        "Given the below columns"
         "We can extract year, month, day, hour, minute, second, duration of two dates and day of the week. "
-        "return the column names as candidates for datetime extraction in JSON format as 'column_name': list[column_names], "
+        "Return the column names as candidates for datetime extraction in JSON format as 'column_name': list[column_names], "
         "and 'explanation': 'your explanation'\n" + result_string
     )
     return message
@@ -96,7 +89,7 @@ def test_date_extraction_profiler(spark):
     ("1", "New York", date(2000, 1, 1), datetime(2000, 1, 1, 12, 0), date(2001, 1, 1)),
     ("2", "Houston", date(2000, 2, 1), datetime(2000, 1, 2, 12, 0), date(2002, 1, 1)),
     ("3", "Phoenix", date(2000, 3, 1), datetime(2000, 1, 3, 12, 0), date(2003, 1, 1))
-    ], ['id', 'city', 'date', 'datetime', 'date2'])
+    ], ["id", "city", "start_date", "start_datetime", "end_date"])
 
     message = column_date_extraction_profiler(df)
     client = OPENAI()
@@ -112,5 +105,6 @@ if __name__ == "__main__":
         .getOrCreate()
     )
     test_normalizer_profiler(spark)
+    test_date_extraction_profiler(spark)
 
     
