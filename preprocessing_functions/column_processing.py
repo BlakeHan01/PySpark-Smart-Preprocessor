@@ -59,37 +59,54 @@ def normalizer(
 
 
 def date_extraction(
-    df, colname: str, new_colname: str, choice=None, anothercol=None
+    df, colname: str, new_colname: str, choice=None, another_col=None
 ):
     """
-    docstring
-    """
-    # extract year, month, day... from the date
-    # choice:   'year', 'month', 'day', 'hour', 'minute', 'second' => y/m/d/h/M/S
-    #           'duration' => duration between the date of two columns
-    #           'weekday' => weekday if 1-5, weekend if 6-7
+    Extract year, month, day... from the date column
+    choice:   'year', 'month', 'day', 'hour', 'minute', 'second' => y/m/d/h/M/S
+            'duration' => duration between the date of two columns
+            'weekday' => weekday if 1-5, weekend if 6-7
 
+    Args:
+        df (DataFrame): The input DataFrame
+        colname (str): The date column to be extracted
+        new_colname (str): The column to store the extracted data
+        choice (str): Choice of extraction type
+        another_col (str): The column to be compared with when choice is 'duration'
+
+    Return:
+        DataFrame: The DataFrame with extracted data column
+        
+    """
     if choice is None:
         return df
-    if choice == "year":
-        output = df.withColumn(new_colname, F.year(colname))
-    elif choice == "month":
-        output = df.withColumn(new_colname, F.month(colname))
-    elif choice == "day":
-        output = df.withColumn(new_colname, F.dayofmonth(colname))
-    elif choice == "hour":
-        output = df.withColumn(new_colname, F.hour(colname))
-    elif choice == "minute":
-        output = df.withColumn(new_colname, F.minute(colname))
-    elif choice == "second":
-        output = df.withColumn(new_colname, F.second(colname))
-    elif choice == "duration" and anothercol is not None:
-        output = df.withColumn(new_colname, F.datediff(anothercol, colname))
-    elif choice == "weekday":
+
+    date_functions = {
+        'year': F.year,
+        'month': F.month,
+        'day': F.dayofmonth,
+        'hour': F.hour,
+        'minute': F.minute,
+        'second': F.second
+    }
+
+    if choice in date_functions:
+        func = date_functions[choice]
+        output = df.withColumn(new_colname, func(colname))
+    elif choice == 'duration' and another_col is not None:
         output = df.withColumn(
-            new_colname,
-            F.lit("weekend" if F.dayofweek in [6, 7] else "weekday"),
+            new_colname, 
+            F.datediff(df[another_col], df[colname])
         )
+    elif choice == 'weekday':
+        output = df.withColumn(
+            new_colname, 
+            F.when(F.dayofweek(df[colname]).isin([6, 7]), 'weekend')
+            .otherwise('weekday')
+        )
+    else:
+        output = df
+
     return output
 
 
