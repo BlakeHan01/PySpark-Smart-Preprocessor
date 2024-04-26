@@ -15,10 +15,9 @@ def normalizer(
     df,
     column_name: str,
     column_new_name,
+    choice: int,
     range_start: float = 0,
     range_end: float = 1,
-    min_max_scaling: bool = True,
-    standardization: bool = True,
 ):
     """
     Normalize the values in a column of a DataFrame using either Min-Max Scaling or Standardization.
@@ -36,26 +35,33 @@ def normalizer(
         DataFrame: The DataFrame with the normalized column.
 
     """
-    if min_max_scaling:
-        # Apply Min-Max Scaling
+    # Step 1: Create a vector column
+    assembler = VectorAssembler(
+        inputCols=[column_name], outputCol=column_name + "_vector"
+    )
+    vector_df = assembler.transform(df)
+
+    # Step 2: Apply Min-Max Scaling
+    if choice == 1:
         min_max_scaler = MinMaxScaler(
-            inputCol=column_name,
+            inputCol=column_name + "_vector",
             outputCol=column_new_name,
             min=range_start,
             max=range_end,
         )
-        df = min_max_scaler.fit(df).transform(df)
-    if standardization:
-        # Apply Standardization
+        vector_df = min_max_scaler.fit(vector_df).transform(vector_df)
+
+    # Step 2: Apply Standardization
+    if choice == 2:
         standard_scaler = StandardScaler(
-            inputCol=column_name,
+            inputCol=column_name + "_vector",
             outputCol=column_new_name,
             withMean=True,
             withStd=True,
         )
-        df = standard_scaler.fit(df).transform(df)
+        vector_df = standard_scaler.fit(vector_df).transform(vector_df)
 
-    return df
+    return vector_df
 
 
 def date_extraction(
