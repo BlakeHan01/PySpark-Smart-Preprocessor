@@ -19,7 +19,7 @@ df = spark.read.csv(
 df.select("num_critic_for_reviews").show(3)
 
 # column normalizer
-from profiling.column_profiling_normalizer import column_normalizer_profiler
+from profiling.column_profiling import column_normalizer_profiler
 
 
 client = OPENAI()
