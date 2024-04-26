@@ -1,11 +1,15 @@
 import asyncio
 from openai import OpenAI
-from config.config import OPENAI_API_KEY, GPT3
+import os
+from dotenv import load_dotenv
 
+# from config.config import OPENAI_API_KEY, GPT_MODEL
+
+load_dotenv()
 
 class OPENAI:
-    def __init__(self, running_model=GPT3):
-        self.client = OpenAI(api_key=OPENAI_API_KEY)
+    def __init__(self, running_model=os.getenv("GPT_MODEL")):
+        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self.model = running_model
 
     def chat_completion(self, message, **kwargs):
