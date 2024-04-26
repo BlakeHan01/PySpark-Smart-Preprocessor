@@ -1,12 +1,13 @@
 import asyncio
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col
+from preprocessing_functions.column_processing import normalizer
 from pyspark.sql.types import IntegerType, FloatType, DoubleType
 from tooling.open_ai import OPENAI
 import json
 
 
-def column_normalizer_profiler(df) -> str:
+def column_normalizer_profiler(df, client) -> str:
     """
     Return the message to be passed into the chat_completion function
     """
@@ -30,7 +31,31 @@ def column_normalizer_profiler(df) -> str:
         "return the column names as candidates for normalization in JSON format as 'column_name': list[column_names], "
         "and 'explanation': 'your explanation'\n" + result_string
     )
-    return message
+    result_dict = {}
+    while "column_name" not in result_dict:
+        response = client.chat_completion(message, temperature=0)
+
+        # Convert JSON string to dictionary
+        result_dict = json.loads(response)
+
+        explaination = result_dict["explanation"]
+        column_names_arr = result_dict["column_name"]
+        print(f"Column names to normalize: {column_names_arr}")
+        print(f"Here's why: {explaination}")
+    # Take user input from terminal
+    user_input = input("Enter columns to normalize(comma seperated): ")
+    choice = input(
+        "Enter 1 for min_max_normalization or 2 for standardization: "
+    )
+    if "," in choice:
+        input_list = user_input.split(",")
+    else:
+        input_list = [user_input]
+    for column_name in input_list:
+        df = normalizer(
+            df, column_name, f"normalized_{column_name}", int(choice), 0, 1
+        )
+    return df
 
 
 if __name__ == "__main__":
