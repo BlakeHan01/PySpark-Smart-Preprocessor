@@ -5,7 +5,7 @@ from pyspark.sql.types import IntegerType, FloatType, DoubleType, DateType, Time
 from tooling.open_ai import OPENAI
 from datetime import datetime, date
 import json
-from preprocessing_functions.column_processing import normalizer
+from preprocessing_functions.column_processing import normalizer, date_extraction
 
 
 def column_normalizer_profiler(df, client) -> str:
@@ -59,25 +59,62 @@ def column_normalizer_profiler(df, client) -> str:
     return df
 
 
-def column_date_extraction_profiler(df) -> str:
+def column_date_extraction_profiler(df, client) -> str:
     """
-    Return the message to be passed into the chat_completion function
+    Date extraction process
     """
     cols = [
         f.name
         for f in df.schema.fields
     ]
-    result_string = ""
-    for c in cols:
-        result_string += str(c) + '\n'
+    # print(str(cols))
+    
+    # first_row = df.first()
 
     message = (
-        "Given the below columns"
-        "We can extract year, month, day, hour, minute, second, duration of two dates and day of the week. "
+        "Given the below column names" + str(cols) +
         "Return the column names as candidates for datetime extraction in JSON format as 'column_name': list[column_names], "
-        "and 'explanation': 'your explanation'\n" + result_string
+        "and 'explanation': 'your explanation'\n" 
     )
-    return message
+    result_dict = {}
+    while "column_name" not in result_dict:
+        response = client.chat_completion(message, temperature=0)
+        # print(response)
+
+        # Convert JSON string to dictionary
+        result_dict = json.loads(response)
+
+        explaination = result_dict["explanation"]
+        column_names_arr = result_dict["column_name"]
+        print(f"Column names to process: {column_names_arr}")
+        print(f"Here's why: {explaination}")
+
+    # Take user input from terminal
+    choice_prompt = "Enter your choice of extraction: 'year', 'month', 'day', 'hour', 'minute', 'second', 'weekday'"
+    if len(column_names_arr) >= 2:
+        choice_prompt += ", or you can enter 'duration' to compute the duration between two dates"
+    choice_prompt += ": "
+    choice = input(choice_prompt)
+
+    if choice != 'duration':
+        user_input = input("Enter columns to you want to process(comma seperated): ")
+        if "," in choice:
+            input_list = user_input.split(",")
+        else:
+            input_list = [user_input]
+        for column_name in input_list:
+            df = date_extraction(
+                df, column_name, f"{column_name}_{choice}_extracted", choice=choice)
+    else:
+        user_input = input("Enter two columns to you want to compute the duration (comma seperated): ")
+        input_list = user_input.split(",")
+        while len(input_list) != 2:
+            user_input = input("Reenter two columns to you want to compute the duration (comma seperated): ")
+            input_list = user_input.split(",")
+        col1, col2 = input_list
+        df = date_extraction(
+                df, col1, f"{col1}_{col2}_duration", choice=choice, another_col=col2)
+    return df
 
 ##################################################################
 # TEST
@@ -112,9 +149,9 @@ def test_date_extraction_profiler(spark):
         Test date extraction profiler
     """
     df = spark.createDataFrame([
-    ("1", "New York", date(2000, 1, 1), datetime(2000, 1, 1, 12, 0), date(2001, 1, 1)),
-    ("2", "Houston", date(2000, 2, 1), datetime(2000, 1, 2, 12, 0), date(2002, 1, 1)),
-    ("3", "Phoenix", date(2000, 3, 1), datetime(2000, 1, 3, 12, 0), date(2003, 1, 1))
+    ("1", "New York", "2000-01-01", "2000-01-01 12:00", "2001-01-01"),
+    ("2", "Houston", "2000-02-01", "2000-01-01 12:00", "2001-02-01"),
+    ("3", "Phoenix", "2000-03-01", "2000-01-01 12:00", "2001-03-01")
     ], ["id", "city", "start_date", "start_datetime", "end_date"])
 
     message = column_date_extraction_profiler(df)
@@ -130,5 +167,5 @@ if __name__ == "__main__":
         .appName("Column Profiler")
         .getOrCreate()
     )
-    test_normalizer_profiler(spark)
-    test_date_extraction_profiler(spark)
+    # test_normalizer_profiler(spark)
+    # test_date_extraction_profiler(spark)
