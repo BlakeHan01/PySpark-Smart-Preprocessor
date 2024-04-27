@@ -9,7 +9,7 @@ spark.sparkContext.setLogLevel("ERROR")
 
 # Read the CSV file into a DataFrame
 df = spark.read.csv(
-    "unclean_sample.csv",
+    "/Users/qinyidan/PySpark-Smart-Preprocessor/unclean_sample.csv",
     header=True,
     inferSchema=True,
 )
@@ -20,11 +20,13 @@ df.select("num_critic_for_reviews").show(3)
 
 # column normalizer
 from profiling.column_profiling import column_normalizer_profiler
-
+from profiling.column_profiling import imputation_profiler
 
 client = OPENAI()
-df = column_normalizer_profiler(df, client)
+# df = column_normalizer_profiler(df, client)
+df = imputation_profiler(df, client)
 
-df.select(
-    "num_critic_for_reviews_vector", "normalized_num_critic_for_reviews"
-).show(3)
+# df.select( ---
+#     "num_critic_for_reviews_vector", "normalized_num_critic_for_reviews"
+# ).show(3)
+df.show()
