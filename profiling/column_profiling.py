@@ -79,6 +79,52 @@ def column_date_extraction_profiler(df) -> str:
     )
     return message
 
+    def imputation_profiler(df) -> str:
+        """
+        Analyze the DataFrame to determine the proportion of missing values per column and
+        suggest columns for imputation based on a threshold of missing data.
+
+        Returns:
+        str: A message formatted with columns recommended for imputation and their statistics.
+        """
+
+        data_missing = {}
+        fields = df.schema.fields
+        for field in fields:
+            col_name = field.name
+            row_cnt = df.count()
+            cnt_NULL = df.select(col_name).where(col(col_name).isNull() | isnan(col(col_name))).count()
+            ratio = cnt_NULL / row_cnt
+            data_missing[col_name] = ratio
+
+        # Threshold for recommending imputation could be set here (e.g., 0.2 for 20% missing)
+        threshold = 0.8
+        columns_for_imputation = [
+            col_name for col_name, missing_ratio in data_missing.items() if missing_ratio > 0.0
+            ]
+        columns_may_drop = [
+            col_name for col_name, missing_ratio in data_missing.items() if missing_ratio > threshold
+            ]
+        # Formatting results
+        result_string = ""
+        for col_name, missing_ratio in data_missing.items():
+            result_string += f
+            "{col_name}: {missing_ratio * 100:.2f}% missing data\n"
+
+        message = (
+            "Based on the analysis, the following columns are candidates for imputation "
+            "(there is some missing data in each column):\n"
+            + ", ".join(columns_for_imputation) + "\n"
+            + "Detailed missing data percentages per column:\n"
+            + result_string
+            + "If the ratio of missing data of some column is larger than threshold \n"
+            + "these column will be dropped in the imputation, by default, the value of threshold is 0.8\n"
+            + "For the remaining columns, you can choose the following strategy to replace the Null value:\n"
+            + "[min_value], [max_value], [mode_value], by default, the strategy is [mode_value]"
+        )
+
+        return message
+
 ##################################################################
 # TEST
 ##################################################################
@@ -123,6 +169,24 @@ def test_date_extraction_profiler(spark):
     result_dict = json.loads(response)
     print(result_dict)
 
+def test_imputation_profiler(spark):
+
+
+    df = spark.createDataFrame([
+        ("AK", "99504", 2.516, "a"),
+        (None, None, 30.709, "b"),
+        ("NY", "35010", 6.849, "c"),
+        (None, "99645", None, "d"),
+        (None, "35127", 42.966, "e"),
+        (None, "99504", None, "f"),
+    ], ['State', 'Zipcode', 'value', 'tmp'])
+
+    message = imputation_profiler(df)
+    client = OPENAI()
+    response = client.chat_completion(message, temperature=0)
+    result_dict = json.loads(response)
+    print(result_dict)
+
 if __name__ == "__main__":
     # Initialize SparkSession
     spark = (
@@ -132,3 +196,4 @@ if __name__ == "__main__":
     )
     test_normalizer_profiler(spark)
     test_date_extraction_profiler(spark)
+    test_imputation_profiler(spark)
