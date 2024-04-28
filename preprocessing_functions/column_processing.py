@@ -4,7 +4,7 @@ from pyspark.ml import Pipeline
 from pyspark.ml.feature import VectorAssembler
 from pyspark.sql import functions as F
 from pyspark.sql.types import NumericType
-from pyspark.sql.functions import col, isnan, when, desc
+from pyspark.sql.functions import col, isnan, when, desc, to_date
 from pyspark.ml.feature import Tokenizer, StopWordsRemover, RegexTokenizer
 from pyspark.ml import Pipeline
 
@@ -86,6 +86,8 @@ def date_extraction(
     """
     if choice is None:
         return df
+    
+    df.withColumn(colname, to_date(col(colname), "yyyy-MM-dd"))
 
     date_functions = {
         'year': F.year,
