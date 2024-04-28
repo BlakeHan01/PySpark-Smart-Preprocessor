@@ -1,11 +1,12 @@
 import asyncio
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col
+from pyspark.sql.functions import col, regexp_replace
 from pyspark.sql.types import IntegerType, FloatType, DoubleType, DateType, TimestampType, StringType
 from tooling.open_ai import OPENAI
+from pyspark.sql import DataFrame
 from datetime import datetime, date
 import json
-from preprocessing_functions.column_processing import normalizer, date_extraction
+from preprocessing_functions.column_processing import normalizer, date_extraction, handle_text_data
 
 
 def column_normalizer_profiler(df, client) -> str:
@@ -68,7 +69,7 @@ def column_date_extraction_profiler(df, client) -> str:
         for f in df.schema.fields
     ]
     # print(str(cols))
-    
+
     # first_row = df.first()
 
     message = (
@@ -115,6 +116,78 @@ def column_date_extraction_profiler(df, client) -> str:
         df = date_extraction(
                 df, col1, f"{col1}_{col2}_duration", choice=choice, another_col=col2)
     return df
+
+
+def column_textdata_profiler(df: DataFrame) -> str:
+    """
+    Profiles each text data column in the DataFrame for null values and all most common values,
+    handling ties properly.
+
+    Parameters:
+    df (DataFrame): The DataFrame to be profiled.
+
+    Returns:
+    str: A prompt containing the profiling results and asking for further processing advice.
+    """
+    result_info = []
+    text_cols = [
+        f.name for f in df.schema.fields if isinstance(f.dataType, StringType)
+    ]
+
+    for column in text_cols:
+        null_count = df.filter(col(column).isNull()).count()
+
+        # Count rows with non-alphabetic characters
+        non_alpha_count = df.filter(col(column).rlike("[^a-zA-Z ]")).count()
+
+        # Append the information to the results list
+        result_info.append(
+            f"Column '{column}' has {null_count} null values and {non_alpha_count} rows with non-alphabetic characters."
+        )
+
+    # Join all column results into a single string
+    result_string = "\n".join(result_info)
+
+    prompt = (
+        "Given the below columns, with their count of null values and number of rows where it has non alphabetic characters, "
+        "return only the text value column names as candidates for text data processing to remove null or "
+        "remove strange the non alphabetic characters in JSON format as 'column_name': list[column_names], "
+        "and 'explanation': 'your explanation'\n" + result_string
+    )
+    result_dict = {}
+    client = OPENAI()
+    while "column_name" not in result_dict:
+        response = client.chat_completion(prompt, temperature=0)
+
+        # Convert JSON string to dictionary
+        result_dict = json.loads(response)
+
+        columns_to_process = result_dict["column_name"]
+        explanation = result_dict["explanation"]
+        print(f"Columns recommended for processing: {columns_to_process}")
+        print(f"Explanation: {explanation}")
+
+    # Ask the user for their choice on what to do with the recommended columns
+    operation_columns = input(
+        "Enter columns to perform operations(comma seperated):"
+    )
+    print("1: Remove null values")
+    print("2: Remove non-alphabetic characters")
+    print("3: Both")
+    operation_choice = input(
+        "Enter your choice for each column in the same order(1, 2, or 3, comma seperated): "
+    )
+
+    # Split user input into lists
+    columns = operation_columns.split(",")
+    operations = operation_choice.split(",")
+
+    # Apply the operations to the columns as per user input
+    for column, operation in zip(columns, operations):
+        df = handle_text_data(df, column.strip(), operation.strip())
+
+    return df
+
 
 ##################################################################
 # TEST

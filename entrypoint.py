@@ -6,7 +6,6 @@ from tooling.open_ai import OPENAI
 from profiling.column_profiling import column_normalizer_profiler, column_date_extraction_profiler
 
 
-
 def demo_normalizer(df):
     #### DEMO part for normalizer
     # Show the DataFrame
@@ -32,10 +31,21 @@ def demo_date_extraction(df):
     client = OPENAI()
     df = column_date_extraction_profiler(df, client)
 
-
     df.select(
         "movie_title", "title_date", "title_date_year_extracted"
     ).show(3)
+
+
+def demo_textdata_profiler(df):
+
+    # message = column_textdata_profiler(df)
+    # client = OPENAI()
+    # response = client.chat_completion(message, temperature=0)
+
+    # Convert JSON string to dictionary
+    result_df = column_textdata_profiler(df)
+    result_df.show()
+    return result_df
 
 
 if __name__ == "__main__":
@@ -49,32 +59,5 @@ if __name__ == "__main__":
         header=True,
         inferSchema=True,
     )
-
-#### DEMO part for normalizer
-# Show the DataFrame
-# df.select("num_critic_for_reviews").show(3)
-
-# # column normalizer
-# from profiling.column_profiling import column_normalizer_profiler
-
-
-# client = OPENAI()
-# df = column_normalizer_profiler(df, client)
-
-# df.select(
-#     "num_critic_for_reviews_vector", "normalized_num_critic_for_reviews"
-# ).show(3)
-
-
-def test_textdata_profiler(df):
-
-    # message = column_textdata_profiler(df)
-    # client = OPENAI()
-    # response = client.chat_completion(message, temperature=0)
-
-    # Convert JSON string to dictionary
-    result_df = column_textdata_profiler(df)
-    result_df.show()
-    return result_df
-
-test_textdata_profiler(df)
+    # demo_date_extraction(df)
+    demo_textdata_profiler(df)
