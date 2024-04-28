@@ -93,7 +93,7 @@ def date_extraction(
     """
     if choice is None:
         return df
-    
+
     df.withColumn(colname, to_date(col(colname), "yyyy-MM-dd"))
 
     date_functions = {
@@ -135,10 +135,10 @@ def Imputation(df, threthold=0.8, replace_strate="mode_value"):
     # by defalut, the strategy uses the mode value in each column to replace the Null/Nan
     # If the data type of a column is numerical, then the user can specify one strategy from 3 kinds of values in each column
     fields = df.schema.fields
+    drop_col = []
     for field in fields:
         col_name = field.name
         is_numerical = isinstance(field.dataType, NumericType)
-        drop_col = []
         row_cnt = df.count()
         cnt_NULL = (
             df.select(col_name)
