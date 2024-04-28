@@ -1,6 +1,6 @@
 import asyncio
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, regexp_replace, isnan, when, desc
+from pyspark.sql.functions import col, regexp_replace, isnan, isnull, when, desc
 from pyspark.sql.types import IntegerType, FloatType, DoubleType, DateType, TimestampType, StringType
 from tooling.open_ai import OPENAI
 from pyspark.sql import DataFrame
@@ -81,7 +81,7 @@ def imputation_profiler(df, client) -> str:
 
         cnt_NULL = (
             df.select(col_name)
-            .where(col(col_name).isNull() | isnan(col(col_name)))
+            .where(col(col_name).isNull() | isnull(col(col_name)))
             .count()
         )
         ratio = cnt_NULL / row_cnt

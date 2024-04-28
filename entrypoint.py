@@ -75,7 +75,12 @@ if __name__ == "__main__":
         header=True,
         inferSchema=True,
     )
+    
+    print("Imputation: ")
     df = demo_imputation(df)
-    # df = demo_date_extraction(df)
-    # df = demo_textdata_profiler(df)
-    # df = demo_normalizer(df)
+    print("Date Extraction: ")
+    df = demo_date_extraction(df)
+    print("Text Data Profiler: ")
+    df = demo_textdata_profiler(df)
+    print("Normalizer: ")
+    df = demo_normalizer(df)
