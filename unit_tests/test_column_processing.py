@@ -1,6 +1,10 @@
 import pytest
 from pyspark.sql import SparkSession
-from preprocessing_functions.column_processing import normalizer, date_extraction
+from preprocessing_functions.column_processing import (
+    normalizer,
+    date_extraction,
+    Imputation,
+)
 from datetime import datetime, date
 
 @pytest.fixture
@@ -49,3 +53,44 @@ def test_date_extraction(spark_session):
     for row in new_values:
         assert row.new_col == 'weekend' if row.date.isoweekday in [6, 7] else 'weekday'
 
+
+def test_imputation(spark_session):
+    df = spark_session.createDataFrame(
+        [
+            ("AK", "99504", 2.516),
+            (None, None, 30.709),
+            ("NY", "35010", 6.849),
+            (None, "99645", None),
+            (None, "35127", 42.966),
+            (None, "99504", None),
+        ],
+        ["State", "Zipcode", "value"],
+    )
+
+    imputed_df = Imputation(df, threthold=0.5, replace_strate="min_value")
+    # imputed_df.show()
+    # to check whether the State column is dropped
+    assert "State" not in imputed_df.columns
+
+    assert "Zipcode" in imputed_df.columns
+    assert "value" in imputed_df.columns
+    # to check whether the None value in the remaining columns is replaced by some strategy
+    assert (
+        imputed_df.filter(
+            col("Zipcode").isNull() | col("value").isNull()
+        ).count()
+        == 0
+    )
+
+    rows = imputed_df.collect()
+
+    valid_zipcodes = {"99504", "35010", "99645", "35127"}
+    # None value of Non-numerical column data needs to be replaced by the mode value strategy
+    assert (
+        imputed_df.select("Zipcode").where(col("Zipcode") == "99504").count()
+        == 3
+    )
+    # Numerical data can be replaced by the user defined strategy
+    assert imputed_df.select("value").where(col("value") == 2.516).count() == 3
+    for row in rows:
+        assert row["Zipcode"] in valid_zipcodes

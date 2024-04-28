@@ -1,10 +1,13 @@
 import json
 from pyspark.sql import SparkSession
-
+from profiling.column_profiling import column_textdata_profiler
 from tooling.open_ai import OPENAI
 
-from profiling.column_profiling import column_normalizer_profiler, column_date_extraction_profiler
-
+from profiling.column_profiling import (
+    column_normalizer_profiler,
+    column_date_extraction_profiler,
+    imputation_profiler,
+)
 
 
 def demo_normalizer(df):
@@ -23,6 +26,7 @@ def demo_normalizer(df):
     df.select(
         "num_critic_for_reviews_vector", "normalized_num_critic_for_reviews"
     ).show(3)
+    return df
 
 def demo_date_extraction(df):
     #### DEMO part for date extraction
@@ -32,10 +36,32 @@ def demo_date_extraction(df):
     client = OPENAI()
     df = column_date_extraction_profiler(df, client)
 
-
     df.select(
         "movie_title", "title_date", "title_date_year_extracted"
     ).show(3)
+    return df
+
+
+def demo_imputation(df):
+
+    df.show()
+    client = OPENAI()
+    df = imputation_profiler(df, client)
+
+    df.show()
+    return df
+
+
+def demo_textdata_profiler(df):
+
+    # message = column_textdata_profiler(df)
+    # client = OPENAI()
+    # response = client.chat_completion(message, temperature=0)
+
+    # Convert JSON string to dictionary
+    result_df = column_textdata_profiler(df)
+    result_df.show()
+    return result_df
 
 
 if __name__ == "__main__":
@@ -49,6 +75,7 @@ if __name__ == "__main__":
         header=True,
         inferSchema=True,
     )
-
-    # demo_normalizer(df)
-    demo_date_extraction(df)
+    df = demo_imputation(df)
+    # df = demo_date_extraction(df)
+    # df = demo_textdata_profiler(df)
+    # df = demo_normalizer(df)

@@ -4,7 +4,14 @@ from pyspark.ml import Pipeline
 from pyspark.ml.feature import VectorAssembler
 from pyspark.sql import functions as F
 from pyspark.sql.types import NumericType
-from pyspark.sql.functions import col, isnan, when, desc, to_date
+from pyspark.sql.functions import (
+    col,
+    isnan,
+    when,
+    desc,
+    to_date,
+    regexp_replace,
+)
 from pyspark.ml.feature import Tokenizer, StopWordsRemover, RegexTokenizer
 from pyspark.ml import Pipeline
 
@@ -86,7 +93,7 @@ def date_extraction(
     """
     if choice is None:
         return df
-    
+
     df.withColumn(colname, to_date(col(colname), "yyyy-MM-dd"))
 
     date_functions = {
@@ -128,10 +135,10 @@ def Imputation(df, threthold=0.8, replace_strate="mode_value"):
     # by defalut, the strategy uses the mode value in each column to replace the Null/Nan
     # If the data type of a column is numerical, then the user can specify one strategy from 3 kinds of values in each column
     fields = df.schema.fields
+    drop_col = []
     for field in fields:
         col_name = field.name
         is_numerical = isinstance(field.dataType, NumericType)
-        drop_col = []
         row_cnt = df.count()
         cnt_NULL = (
             df.select(col_name)
@@ -215,38 +222,26 @@ def Imputation(df, threthold=0.8, replace_strate="mode_value"):
     return df
 
 
-def handle_text_data(df, colname: str, output_colname: str):
+def handle_text_data(df, column_name, operation):
     """
-    Processes text data within a PySpark DataFrame column through tokenization
-    and stop word removal.
+    Processes a given text column in a DataFrame by removing null values and/or non-alphabetic characters.
 
     Parameters:
-    df (pyspark.sql.DataFrame): The DataFrame containing the text data to process.
-    colname (str): The name of the column in `df` that contains the text data.
-    output_colname (str): The name of the new column to store the processed text data.
+    df (DataFrame): The DataFrame containing the data to be processed.
+    column_name (str): The column name on which to perform operations.
+    operation (str): The operation to perform: '1' to remove nulls, '2' to remove non-alphabetic characters, '3' for both.
 
     Returns:
-    pyspark.sql.DataFrame: A DataFrame with the text data processed and stored
-    in `output_colname`.
+    DataFrame: The processed DataFrame with the operations applied.
     """
-    # Tokenize the text using the RegexTokenizer to split the text into words by
-    # punctuation or space.
-    tokenizer = RegexTokenizer(
-        inputCol=colname, outputCol=colname + "_tokens", pattern="\\W"
-    )
+    # Operation '1' or '3' includes removing null values
+    if operation in {"1", "3"}:
+        df = df.filter(col(column_name).isNotNull())
 
-    # Remove stop words from the input column
-    remover = StopWordsRemover(
-        inputCol=colname + "_tokens", outputCol=colname + "_filtered"
-    )
-
-    # Pipeline above stages to process text data
-    pipeline = Pipeline(stages=[tokenizer, remover])
-    model = pipeline.fit(df)
-    df = model.transform(df)
-
-    # Clean up the dataframe by removing intermediate columns
-    df = df.withColumn(output_colname, col(colname + "_filtered"))
-    df = df.drop(colname + "_tokens", colname + "_filtered")
+    # Operation '2' or '3' includes removing non-alphabetic characters
+    if operation in {"2", "3"}:
+        df = df.withColumn(
+            column_name, regexp_replace(col(column_name), "[^a-zA-Z ]", "")
+        )
 
     return df
