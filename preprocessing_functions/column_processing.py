@@ -6,7 +6,7 @@ from pyspark.sql import functions as F
 from pyspark.sql.types import NumericType
 from pyspark.sql.functions import (
     col,
-    isnan,
+    isnull,
     when,
     desc,
     to_date,
@@ -142,7 +142,7 @@ def Imputation(df, threthold=0.8, replace_strate="mode_value"):
         row_cnt = df.count()
         cnt_NULL = (
             df.select(col_name)
-            .where(col(col_name).isNull() | isnan(col(col_name)))
+            .where(col(col_name).isNull() | isnull(col(col_name)))
             .count()
         )
         ratio = cnt_NULL / row_cnt
@@ -152,7 +152,7 @@ def Imputation(df, threthold=0.8, replace_strate="mode_value"):
             if not is_numerical:
                 mode_value = (
                     df.select(col_name)
-                    .filter(col(col_name).isNotNull() & (~isnan(col(col_name))))
+                    .filter(col(col_name).isNotNull() & (~isnull(col(col_name))))
                     .orderBy(desc(col_name))
                     .groupBy(col_name)
                     .count()
@@ -161,7 +161,7 @@ def Imputation(df, threthold=0.8, replace_strate="mode_value"):
                 df = df.withColumn(
                     col_name,
                     when(
-                        col(col_name).isNull() | isnan(col(col_name)),
+                        col(col_name).isNull() | isnull(col(col_name)),
                         mode_value,
                     ).otherwise(col(col_name)),
                 )
@@ -170,7 +170,7 @@ def Imputation(df, threthold=0.8, replace_strate="mode_value"):
                     mode_value = (
                         df.select(col_name)
                         .filter(
-                            col(col_name).isNotNull() & (~isnan(col(col_name)))
+                            col(col_name).isNotNull() & (~isnull(col(col_name)))
                         )
                         .orderBy(desc(col_name))
                         .groupBy(col_name)
@@ -180,7 +180,7 @@ def Imputation(df, threthold=0.8, replace_strate="mode_value"):
                     df = df.withColumn(
                         col_name,
                         when(
-                            col(col_name).isNull() | isnan(col(col_name)),
+                            col(col_name).isNull() | isnull(col(col_name)),
                             mode_value,
                         ).otherwise(col(col_name)),
                     )
@@ -188,7 +188,7 @@ def Imputation(df, threthold=0.8, replace_strate="mode_value"):
                     min_value = (
                         df.select(col_name)
                         .filter(
-                            col(col_name).isNotNull() & (~isnan(col(col_name)))
+                            col(col_name).isNotNull() & (~isnull(col(col_name)))
                         )
                         .orderBy(col_name, ascending=True)
                         .first()[col_name]
@@ -196,7 +196,7 @@ def Imputation(df, threthold=0.8, replace_strate="mode_value"):
                     df = df.withColumn(
                         col_name,
                         when(
-                            col(col_name).isNull() | isnan(col(col_name)),
+                            col(col_name).isNull() | isnull(col(col_name)),
                             min_value,
                         ).otherwise(col(col_name)),
                     )
@@ -204,7 +204,7 @@ def Imputation(df, threthold=0.8, replace_strate="mode_value"):
                     max_value = (
                         df.select(col_name)
                         .filter(
-                            col(col_name).isNotNull() & (~isnan(col(col_name)))
+                            col(col_name).isNotNull() & (~isnull(col(col_name)))
                         )
                         .orderBy(col_name, ascending=False)
                         .first()[col_name]
@@ -212,7 +212,7 @@ def Imputation(df, threthold=0.8, replace_strate="mode_value"):
                     df = df.withColumn(
                         col_name,
                         when(
-                            col(col_name).isNull() | isnan(col(col_name)),
+                            col(col_name).isNull() | isnull(col(col_name)),
                             max_value,
                         ).otherwise(col(col_name)),
                     )
