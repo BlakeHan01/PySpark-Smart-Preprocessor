@@ -53,7 +53,7 @@ def column_normalizer_profiler(df, client) -> str:
     choice = input(
         "Enter 1 for min_max_normalization or 2 for standardization: "
     )
-    if "," in choice:
+    if "," in user_input:
         input_list = user_input.split(",")
     else:
         input_list = [user_input]

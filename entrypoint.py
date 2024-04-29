@@ -13,7 +13,7 @@ from profiling.column_profiling import (
 def demo_normalizer(df):
     #### DEMO part for normalizer
     # Show the DataFrame
-    df.select("num_critic_for_reviews").show(3)
+    # df.show()
 
     # column normalizer
 
@@ -23,9 +23,7 @@ def demo_normalizer(df):
     df = column_normalizer_profiler(df, client)
 
 
-    df.select(
-        "num_critic_for_reviews_vector", "normalized_num_critic_for_reviews"
-    ).show(3)
+    df.show()
     return df
 
 def demo_date_extraction(df):
