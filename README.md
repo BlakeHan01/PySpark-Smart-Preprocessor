@@ -16,3 +16,5 @@ Install PySpark with
 ```
 pip install pyspark
 ```
+
+To run the project, please run the entrypoint.py file. Make sure that OpenAI and PySpark are installed.
